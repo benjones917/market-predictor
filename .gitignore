@@ -137,3 +137,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# pre-trained model file
+model.pth

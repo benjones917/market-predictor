@@ -1,0 +1,43 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    text-align: center;
+}
+
+.container {
+    margin-top: 50px;
+}
+
+input, button {
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+h2 span {
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 5px;
+}
+
+.Buy {
+    color: green;
+}
+
+.Sell {
+    color: red;
+}
+
+.Hold {
+    color: blue;
+}
+
+.error {
+    color: red;
+}
