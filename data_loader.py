@@ -22,7 +22,13 @@ def preprocess_stock_data(stock_symbol):
     X = []
     for i in range(len(prices_scaled) - seq_length):
         X.append(prices_scaled[i:i + seq_length])
+    # Ensure X is a list of NumPy arrays
+    X = np.array(X, dtype=np.float32)  # Convert entire list to a NumPy array
 
-    # Convert to PyTorch tensor (use last sequence)
-    X_test = torch.Tensor([X[-1]])  # Only latest data for prediction
+    print(f"X converted to NumPy, shape: {X.shape}")  # Debugging print
+    print(f"X length: {len(X)}") 
+    # Convert last sequence into PyTorch tensor
+    X_test = torch.tensor(X[-1], dtype=torch.float32)  # Use last sequence
+    X_test = X_test.unsqueeze(0)  # Add batch dimension: (1, seq_length, features)
+    print(f"X_test shape for prediction: {X_test.shape}")
     return X_test

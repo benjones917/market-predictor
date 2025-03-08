@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from model import LSTMClassifier
 
 # List of stocks to train on
-stock_symbols = ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN"]
+stock_symbols = ["AAPL", "GOOGL", "MSFT", "AMZN", "IBM"]
 
 all_X, all_y = [], []
 
@@ -14,58 +14,60 @@ seq_length = 50  # Sequence length
 
 def create_sequences(data, labels, seq_length):
     xs, ys = [], []
+    
+    if len(data) < seq_length:  # Ensure data is long enough
+        print(f"Not enough data for sequence length {seq_length}. Skipping.")
+        return np.array([]), np.array([])
+
     for i in range(len(data) - seq_length):
         x = data[i:i + seq_length]
         y = labels[i + seq_length]
         xs.append(x)
         ys.append(y)
+
     return np.array(xs), np.array(ys)
 
 for stock in stock_symbols:
-    print(f"Downloading data for {stock}...")
-    # Download the maximum available historical data
+    print(f"Fetching data for {stock}...")
+
     df = yf.download(stock, period="max")
+    
     if df.empty:
-        print(f"No data found for {stock}. Skipping.")
+        print(f"Warning: No data found for {stock}. Skipping.")
         continue
 
-    # Calculate daily returns
     df['Returns'] = df['Close'].pct_change()
 
-    # Define signals: 1 (Buy), 0 (Hold), -1 (Sell)
-    threshold = 0.005  # Example threshold of 0.5%
-    df['Signal'] = 0  # Default to Hold
-    df.loc[df['Returns'] > threshold, 'Signal'] = 1  # Buy signal
-    df.loc[df['Returns'] < -threshold, 'Signal'] = -1  # Sell signal
+    # Define buy/sell/hold signals
+    threshold = 0.005
+    df['Signal'] = 0
+    df.loc[df['Returns'] > threshold, 'Signal'] = 1  # Buy
+    df.loc[df['Returns'] < -threshold, 'Signal'] = -1  # Sell
 
-    # Shift labels to be in the range [0, 1, 2]
-    df['Signal'] = df['Signal'] + 1
-
-    # Remove any rows with NaN values
     df.dropna(inplace=True)
 
-    # Use only the 'Close' price for input
-    prices = df[['Close']].values
-
-    # Normalize the price data between -1 and 1
+    # Normalize price data
     scaler = MinMaxScaler(feature_range=(-1, 1))
-    prices_scaled = scaler.fit_transform(prices)
+    prices_scaled = scaler.fit_transform(df[['Close']].values)
 
-    # Create sequences for the LSTM model
-    X, y = create_sequences(prices_scaled, df['Signal'].values, seq_length)
+    df['Signal'] = df['Signal'] + 1
+
+    # Create sequences
+    X, y = create_sequences(prices_scaled, df['Signal'].values, seq_length=50)
+
+    if len(X) == 0 or len(y) == 0:  # Check if sequences are empty
+        print(f"Warning: No valid sequences for {stock}. Skipping.")
+        continue
+
     all_X.append(X)
     all_y.append(y)
 
-if len(all_X) == 0:
-    raise ValueError("No training data was collected for any of the stocks.")
+# Ensure we have data before converting
+if not all_X:
+    raise ValueError("No valid stock data found. Check stock symbols or data availability.")
 
-# Combine the sequences from all stocks
-X_train = np.vstack(all_X)
-y_train = np.hstack(all_y)
-
-# Convert the numpy arrays to PyTorch tensors
-X_train = torch.Tensor(X_train)
-y_train = torch.LongTensor(y_train)
+X_train = torch.Tensor(np.vstack(all_X))  # Stack sequences properly
+y_train = torch.LongTensor(np.hstack(all_y))  # Flatten labels correctly
 
 # Initialize the LSTM model
 model = LSTMClassifier()
